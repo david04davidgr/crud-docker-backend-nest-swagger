@@ -13,7 +13,15 @@ export class StorageService {
     this.internalUrl = this.config.get<string>('MINIO_INTERNAL_URL');
   }
 
-  async uploadProductImage(file: Express.Multer.File) {
+  uploadVehicleImage(file: Express.Multer.File) {
+    return this.uploadFile(file, 'vehicles');
+  }
+
+  uploadProductImage(file: Express.Multer.File) {
+    return this.uploadFile(file, 'products');
+  }
+
+  private async uploadFile(file: Express.Multer.File, folder: string) {
     if (!this.isConfigured()) {
       throw new InternalServerErrorException('Storage no configurado');
     }
@@ -21,7 +29,7 @@ export class StorageService {
     const extension = file.originalname.includes('.')
       ? file.originalname.split('.').pop()
       : 'jpg';
-    const objectName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+    const objectName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
 
     const uploadResponse = await fetch(`${this.internalUrl}/${this.bucketName}/${objectName}`, {
       method: 'PUT',

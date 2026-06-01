@@ -75,6 +75,7 @@ Requieren Bearer Token.
 - `GET /vehicles/:id`: `ADMINISTRADOR` y `CLIENTE`
 - `POST /vehicles`: solo `ADMINISTRADOR`
 - `PATCH /vehicles/:id`: solo `ADMINISTRADOR`
+- `POST /vehicles/:id/image`: solo `ADMINISTRADOR`, multipart/form-data con campo `image`
 - `DELETE /vehicles/:id`: solo `ADMINISTRADOR`
 
 Modelo principal:
@@ -90,6 +91,16 @@ Modelo principal:
   "imageUrl": "https://example.com/corolla.jpg"
 }
 ```
+
+Para subir imagenes al bucket, configura estas variables opcionales:
+
+```env
+MINIO_BUCKET=vehicles-images
+MINIO_PUBLIC_URL=https://url-publica-del-bucket
+MINIO_INTERNAL_URL=https://url-interna-o-publica-del-bucket
+```
+
+Si no estan configuradas, la API arranca igualmente y solo fallara el endpoint `POST /vehicles/:id/image`.
 
 ### Carrito y ventas
 

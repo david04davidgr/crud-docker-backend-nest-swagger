@@ -1,5 +1,18 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Role } from '../auth/roles/role.enum';
@@ -35,6 +48,27 @@ export class VehiclesController {
   @Roles(Role.ADMINISTRADOR)
   update(@Param('id') id: string, @Body() dto: UpdateVehicleDto) {
     return this.vehiclesService.update(id, dto);
+  }
+
+  @Post(':id/image')
+  @Roles(Role.ADMINISTRADOR)
+  @UseInterceptors(FileInterceptor('image'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+      required: ['image'],
+    },
+  })
+  uploadImage(@Param('id') id: string, @UploadedFile() image?: Express.Multer.File) {
+    if (!image) throw new BadRequestException('Debes enviar una imagen');
+    return this.vehiclesService.uploadImage(id, image);
   }
 
   @Delete(':id')
