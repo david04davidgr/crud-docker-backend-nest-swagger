@@ -7,6 +7,20 @@ import { ProductsModule } from './products/products.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
 
+function getMongoUri(config: ConfigService) {
+  const uri = (config.get<string>('MONGO_URI') ?? config.get<string>('MONGODB_URI') ?? '')
+    .trim()
+    .replace(/^['"]|['"]$/g, '');
+
+  if (!uri.startsWith('mongodb://') && !uri.startsWith('mongodb+srv://')) {
+    throw new Error(
+      'Invalid MongoDB connection string. Set MONGO_URI to a value that starts with mongodb:// or mongodb+srv://',
+    );
+  }
+
+  return uri;
+}
+
 @Module({
   controllers: [AppController],
   imports: [
@@ -14,7 +28,7 @@ import { UsersModule } from './users/users.module';
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGO_URI') || '',
+        uri: getMongoUri(config),
       }),
     }),
     StorageModule,
