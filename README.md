@@ -1,68 +1,85 @@
-# Backend NestJS: CRUD Productos + JWT + Mongo + Swagger + MinIO
+# Backend NestJS: CRUD Productos + JWT + MongoDB + Swagger
 
-Proyecto base para examen: API backend con autenticación JWT, usuarios, CRUD de productos, subida de imágenes a MinIO y documentación Swagger.
+API NestJS con autenticacion JWT, usuarios, CRUD de productos, healthcheck y documentacion Swagger. El proyecto esta preparado para desplegarse en Railway con el backend separado de la base de datos MongoDB.
 
-## ¿Qué debe hacer el alumno?
-El stack backend + base de datos ya está preparado. El alumno debe:
-1. Construir su propio frontend.
-2. Dockerizar su frontend.
-3. Conectarlo al backend publicado en `http://localhost:3000` desde su contenedor/frontend.
+## Arquitectura Railway
 
-## Requisitos
-- Docker y Docker Compose
+```txt
+Railway Project
+├── backend-nestjs
+└── mongodb (Railway database service)
+```
 
-## Arranque rápido (profesor)
-1. Copia variables de entorno:
-   ```bash
-   cp .env.example .env
-   ```
-2. Levanta servicios:
-   ```bash
-   docker compose up --build
-   ```
-3. API: `http://localhost:3000`
-4. Swagger: `http://localhost:3000/docs`
-5. Healthcheck: `http://localhost:3000/health`
-6. Consola MinIO: `http://localhost:9001` (user/pass: `minioadmin`)
+MongoDB no se ejecuta dentro del contenedor del backend en produccion. Railway debe proveer la conexion mediante variables de entorno.
+
+## Variables de entorno
+
+Copia `.env.example` a `.env` para desarrollo local y configura:
+
+```env
+PORT=3000
+MONGO_URI=mongodb://localhost:27017/products_exam
+JWT_SECRET=change-me
+JWT_EXPIRES_IN=1d
+FRONTEND_URL=http://localhost:5173
+```
+
+En Railway configura:
+
+```env
+MONGO_URI=${{Mongo.MONGO_URL}}
+JWT_SECRET=<valor-seguro>
+JWT_EXPIRES_IN=1d
+FRONTEND_URL=<url-del-frontend>
+```
+
+## Desarrollo local
+
+Con Node.js:
+
+```bash
+npm install
+npm run start:dev
+```
+
+Con Docker Compose, solo para servicios locales de desarrollo:
+
+```bash
+docker compose up --build
+```
+
+API: `http://localhost:3000`
+
+Swagger: `http://localhost:3000/api`
+
+Healthcheck: `http://localhost:3000/health`
+
+## Deploy en Railway
+
+1. Crea un proyecto en Railway con `Deploy from GitHub`.
+2. Anade un servicio MongoDB desde Railway.
+3. En el servicio del backend configura `MONGO_URI=${{Mongo.MONGO_URL}}`.
+4. Configura `JWT_SECRET` con un valor seguro.
+5. Railway construira el backend con el `Dockerfile` multi-stage y ejecutara `node dist/main`.
+
+El archivo `railway.json` fuerza el builder Dockerfile y define reinicios en caso de fallo.
 
 ## Endpoints principales
+
 ### Auth
+
 - `POST /auth/register`
 - `POST /auth/login`
 
-### Products (requiere Bearer Token)
+### Products
+
+Requieren Bearer Token:
+
 - `POST /products`
 - `GET /products`
 - `GET /products/:id`
 - `PATCH /products/:id`
-- `POST /products/:id/images` (multipart/form-data, campo `image`)
+- `POST /products/:id/images`
 - `DELETE /products/:id`
 
-## CORS para frontend del alumno
-- Configura `FRONTEND_URL` en `.env`.
-- Puedes indicar uno o varios orígenes separados por coma.
-  - Ejemplo: `FRONTEND_URL=http://localhost:5173,http://localhost:4173`
-
-## Ejemplo de `docker-compose` del alumno
-Ejemplo mínimo para que el frontend consuma el backend expuesto en localhost:
-
-```yaml
-services:
-  frontend:
-    build: .
-    container_name: alumno_frontend
-    ports:
-      - '5173:80'
-    environment:
-      - VITE_API_URL=http://host.docker.internal:3000
-```
-
-> Nota: `host.docker.internal` permite que el contenedor del frontend alcance el backend publicado en el host (`localhost:3000`).
-
-## Flujo recomendado para examen
-1. Registrar usuario.
-2. Hacer login para obtener `access_token`.
-3. En Swagger usar botón **Authorize** con `Bearer <token>`.
-4. Crear producto.
-5. Subir imagen al producto con `POST /products/:id/images`.
-6. Consumir CRUD + imágenes desde frontend.
+La subida de imagenes requiere configurar las variables opcionales `MINIO_BUCKET`, `MINIO_PUBLIC_URL` y `MINIO_INTERNAL_URL`. Si no estan configuradas, el backend sigue arrancando y el endpoint de imagenes responde con error de storage no configurado.

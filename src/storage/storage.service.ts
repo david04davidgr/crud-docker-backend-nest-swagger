@@ -1,20 +1,20 @@
 import { Injectable, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Multer } from 'multer';
 
 @Injectable()
 export class StorageService implements OnModuleInit {
-  private readonly bucketName: string;
-  private readonly publicUrl: string;
-  private readonly internalUrl: string;
+  private readonly bucketName?: string;
+  private readonly publicUrl?: string;
+  private readonly internalUrl?: string;
 
   constructor(private readonly config: ConfigService) {
-    this.bucketName = this.config.getOrThrow<string>('MINIO_BUCKET');
-    this.publicUrl = this.config.getOrThrow<string>('MINIO_PUBLIC_URL');
-    this.internalUrl = this.config.getOrThrow<string>('MINIO_INTERNAL_URL');
+    this.bucketName = this.config.get<string>('MINIO_BUCKET');
+    this.publicUrl = this.config.get<string>('MINIO_PUBLIC_URL');
+    this.internalUrl = this.config.get<string>('MINIO_INTERNAL_URL');
   }
 
   async onModuleInit() {
+    if (!this.isConfigured()) return;
     await this.ensureBucketReachable();
   }
 
@@ -26,6 +26,10 @@ export class StorageService implements OnModuleInit {
   }
 
   async uploadProductImage(file: Express.Multer.File) {
+    if (!this.isConfigured()) {
+      throw new InternalServerErrorException('Storage no configurado');
+    }
+
     const extension = file.originalname.includes('.')
       ? file.originalname.split('.').pop()
       : 'jpg';
@@ -44,5 +48,9 @@ export class StorageService implements OnModuleInit {
     }
 
     return `${this.publicUrl}/${this.bucketName}/${objectName}`;
+  }
+
+  private isConfigured() {
+    return Boolean(this.bucketName && this.publicUrl && this.internalUrl);
   }
 }
