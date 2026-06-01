@@ -20,7 +20,7 @@ export class AuthService {
     }
 
     const hash = await bcrypt.hash(dto.password, 10);
-    const user = await this.usersService.create(dto.email, hash, dto.name);
+    const user = await this.usersService.create(dto.email, hash, dto.name, dto.role);
 
     return this.buildAuthResponse(user);
   }
@@ -40,7 +40,7 @@ export class AuthService {
   }
 
   private buildAuthResponse(user: UserDocument) {
-    const payload = { sub: user.id, email: user.email, name: user.name };
+    const payload = { sub: user.id, email: user.email, name: user.name, role: user.role };
     const access_token = this.jwtService.sign(payload);
 
     return {
@@ -49,6 +49,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
     };
   }

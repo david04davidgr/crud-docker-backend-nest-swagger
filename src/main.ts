@@ -26,8 +26,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('Products API - Examen alumnos')
-    .setDescription('API backend con CRUD de productos, auth JWT y MongoDB')
+    .setTitle('Concesionario API - Prácticas Angular')
+    .setDescription('API backend con auth JWT, roles, catalogo de vehiculos, carrito y ventas')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

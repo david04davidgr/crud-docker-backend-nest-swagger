@@ -1,30 +1,36 @@
-# Backend NestJS: CRUD Productos + JWT + MongoDB + Swagger
+# Backend Concesionario: NestJS + MongoDB + JWT + Swagger
 
-API NestJS con autenticacion JWT, usuarios, CRUD de productos, healthcheck y documentacion Swagger. El proyecto esta preparado para desplegarse en Railway con el backend separado de la base de datos MongoDB.
+API REST preparada para una practica de Angular: sistema de gestion de concesionario con autenticacion, roles, catalogo de vehiculos y checkout de carrito.
 
-## Arquitectura Railway
+## Roles
 
-```txt
-Railway Project
-├── backend-nestjs
-└── mongodb (Railway database service)
+- `ADMINISTRADOR`: gestiona inventario y consulta historial de ventas.
+- `CLIENTE`: consulta catalogo y procesa compras desde el carrito.
+
+Al registrar usuario puedes indicar el rol:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "123456",
+  "name": "Admin",
+  "role": "ADMINISTRADOR"
+}
 ```
 
-MongoDB no se ejecuta dentro del contenedor del backend en produccion. Railway debe proveer la conexion mediante variables de entorno.
+Si no se envia `role`, se crea como `CLIENTE`.
 
 ## Variables de entorno
 
-Copia `.env.example` a `.env` para desarrollo local y configura:
-
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/products_exam
+MONGO_URI=mongodb://localhost:27017/concesionario
 JWT_SECRET=change-me
 JWT_EXPIRES_IN=1d
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:4200
 ```
 
-En Railway configura:
+En Railway usa el MongoDB service del mismo proyecto:
 
 ```env
 MONGO_URI=${{Mongo.MONGO_URL}}
@@ -33,53 +39,86 @@ JWT_EXPIRES_IN=1d
 FRONTEND_URL=<url-del-frontend>
 ```
 
-## Desarrollo local
-
-Con Node.js:
+## Ejecutar en local
 
 ```bash
 npm install
 npm run start:dev
 ```
 
-Con Docker Compose, solo para servicios locales de desarrollo:
+Swagger:
 
-```bash
-docker compose up --build
+```txt
+http://localhost:3000/api
 ```
 
-API: `http://localhost:3000`
+Healthcheck:
 
-Swagger: `http://localhost:3000/api`
+```txt
+http://localhost:3000/health
+```
 
-Healthcheck: `http://localhost:3000/health`
-
-## Deploy en Railway
-
-1. Crea un proyecto en Railway con `Deploy from GitHub`.
-2. Anade un servicio MongoDB desde Railway.
-3. En el servicio del backend configura `MONGO_URI=${{Mongo.MONGO_URL}}`.
-4. Configura `JWT_SECRET` con un valor seguro.
-5. Railway construira el backend con el `Dockerfile` multi-stage y ejecutara `node dist/main`.
-
-El archivo `railway.json` fuerza el builder Dockerfile y define reinicios en caso de fallo.
-
-## Endpoints principales
+## Endpoints
 
 ### Auth
 
 - `POST /auth/register`
 - `POST /auth/login`
 
-### Products
+El login devuelve `access_token` y los datos del usuario, incluido `role`.
 
-Requieren Bearer Token:
+### Vehiculos
 
-- `POST /products`
-- `GET /products`
-- `GET /products/:id`
-- `PATCH /products/:id`
-- `POST /products/:id/images`
-- `DELETE /products/:id`
+Requieren Bearer Token.
 
-La subida de imagenes requiere configurar las variables opcionales `MINIO_BUCKET`, `MINIO_PUBLIC_URL` y `MINIO_INTERNAL_URL`. Si no estan configuradas, el backend sigue arrancando y el endpoint de imagenes responde con error de storage no configurado.
+- `GET /vehicles`: `ADMINISTRADOR` y `CLIENTE`
+- `GET /vehicles/:id`: `ADMINISTRADOR` y `CLIENTE`
+- `POST /vehicles`: solo `ADMINISTRADOR`
+- `PATCH /vehicles/:id`: solo `ADMINISTRADOR`
+- `DELETE /vehicles/:id`: solo `ADMINISTRADOR`
+
+Modelo principal:
+
+```json
+{
+  "brand": "Toyota",
+  "model": "Corolla",
+  "year": 2022,
+  "price": 18990,
+  "stock": 4,
+  "description": "Compacto hibrido con garantia oficial.",
+  "imageUrl": "https://example.com/corolla.jpg"
+}
+```
+
+### Carrito y ventas
+
+- `POST /checkout`: solo `CLIENTE`
+- `GET /sales`: solo `ADMINISTRADOR`
+
+Ejemplo de checkout:
+
+```json
+{
+  "items": [
+    {
+      "vehicleId": "665f1f77c7f0b2b4b6741b91",
+      "quantity": 1
+    }
+  ]
+}
+```
+
+El backend valida stock, descuenta unidades y crea una venta con total y desglose.
+
+## Railway
+
+El proyecto esta preparado para desplegarse sin `docker-compose` en produccion:
+
+```txt
+Railway Project
+├── backend-nestjs
+└── mongodb
+```
+
+`docker-compose.yml` queda solo para desarrollo local. En Railway solo necesitas el backend desplegado desde GitHub y un servicio MongoDB con `MONGO_URI` configurada.

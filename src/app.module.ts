@@ -3,9 +3,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
-import { ProductsModule } from './products/products.module';
+import { SalesModule } from './sales/sales.module';
 import { StorageModule } from './storage/storage.module';
 import { UsersModule } from './users/users.module';
+import { VehiclesModule } from './vehicles/vehicles.module';
 
 function getMongoUri(config: ConfigService) {
   const uri = (config.get<string>('MONGO_URI') ?? config.get<string>('MONGODB_URI') ?? '')
@@ -34,7 +35,8 @@ function getMongoUri(config: ConfigService) {
     StorageModule,
     UsersModule,
     AuthModule,
-    ProductsModule,
+    VehiclesModule,
+    SalesModule,
   ],
 })
 export class AppModule {}
