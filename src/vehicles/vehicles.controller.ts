@@ -7,11 +7,11 @@ import {
   Param,
   Patch,
   Post,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -50,25 +50,28 @@ export class VehiclesController {
     return this.vehiclesService.update(id, dto);
   }
 
-  @Post(':id/image')
+  @Post(':id/images')
   @Roles(Role.ADMINISTRADOR)
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FilesInterceptor('images', 10))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
       type: 'object',
       properties: {
-        image: {
-          type: 'string',
-          format: 'binary',
+        images: {
+          type: 'array',
+          items: {
+            type: 'string',
+            format: 'binary',
+          },
         },
       },
-      required: ['image'],
+      required: ['images'],
     },
   })
-  uploadImage(@Param('id') id: string, @UploadedFile() image?: Express.Multer.File) {
-    if (!image) throw new BadRequestException('Debes enviar una imagen');
-    return this.vehiclesService.uploadImage(id, image);
+  uploadImages(@Param('id') id: string, @UploadedFiles() images?: Express.Multer.File[]) {
+    if (!images?.length) throw new BadRequestException('Debes enviar al menos una imagen');
+    return this.vehiclesService.uploadImages(id, images);
   }
 
   @Delete(':id')

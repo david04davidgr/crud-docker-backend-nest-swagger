@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsOptional, IsString, IsUrl, Max, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class CreateVehicleDto {
   @ApiProperty({ example: 'Toyota' })
@@ -31,8 +31,4 @@ export class CreateVehicleDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 'https://example.com/corolla.jpg', required: false })
-  @IsOptional()
-  @IsUrl()
-  imageUrl?: string;
 }

@@ -1,11 +1,22 @@
 # Backend Concesionario: NestJS + MongoDB + JWT + Swagger
 
-API REST preparada para una practica de Angular: sistema de gestion de concesionario con autenticacion, roles, catalogo de vehiculos y checkout de carrito.
+API REST para una practica de Angular: gestion de concesionario con autenticacion, roles, catalogo de vehiculos, subida de imagenes a bucket S3-compatible y checkout de carrito.
+
+## Arquitectura Railway
+
+```txt
+Railway Project
+├── backend-nestjs
+├── mongodb
+└── bucket
+```
+
+MongoDB guarda usuarios, vehiculos y ventas. El bucket guarda las imagenes reales; MongoDB solo guarda las keys de esas imagenes.
 
 ## Roles
 
-- `ADMINISTRADOR`: gestiona inventario y consulta historial de ventas.
-- `CLIENTE`: consulta catalogo y procesa compras desde el carrito.
+- `ADMINISTRADOR`: gestiona inventario, sube imagenes y consulta ventas.
+- `CLIENTE`: consulta catalogo y procesa compras.
 
 Al registrar usuario puedes indicar el rol:
 
@@ -22,22 +33,34 @@ Si no se envia `role`, se crea como `CLIENTE`.
 
 ## Variables de entorno
 
+Backend:
+
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/concesionario
-JWT_SECRET=change-me
-JWT_EXPIRES_IN=1d
-FRONTEND_URL=http://localhost:4200
-```
-
-En Railway usa el MongoDB service del mismo proyecto:
-
-```env
 MONGO_URI=${{Mongo.MONGO_URL}}
 JWT_SECRET=<valor-seguro>
 JWT_EXPIRES_IN=1d
 FRONTEND_URL=<url-del-frontend>
 ```
+
+Bucket S3-compatible:
+
+```env
+S3_ENDPOINT=<endpoint-del-bucket>
+S3_BUCKET=<nombre-del-bucket>
+S3_ACCESS_KEY_ID=<access-key>
+S3_SECRET_ACCESS_KEY=<secret-key>
+S3_REGION=auto
+S3_FORCE_PATH_STYLE=true
+```
+
+Opcionalmente, si el bucket expone URLs publicas directas:
+
+```env
+S3_PUBLIC_URL=<url-publica-del-bucket>
+```
+
+Si no defines `S3_PUBLIC_URL`, el backend devuelve URLs firmadas temporales para que Angular pueda mostrar las imagenes.
 
 ## Ejecutar en local
 
@@ -75,10 +98,10 @@ Requieren Bearer Token.
 - `GET /vehicles/:id`: `ADMINISTRADOR` y `CLIENTE`
 - `POST /vehicles`: solo `ADMINISTRADOR`
 - `PATCH /vehicles/:id`: solo `ADMINISTRADOR`
-- `POST /vehicles/:id/image`: solo `ADMINISTRADOR`, multipart/form-data con campo `image`
+- `POST /vehicles/:id/images`: solo `ADMINISTRADOR`, multipart/form-data con campo `images`
 - `DELETE /vehicles/:id`: solo `ADMINISTRADOR`
 
-Modelo principal:
+Crear vehiculo:
 
 ```json
 {
@@ -87,20 +110,36 @@ Modelo principal:
   "year": 2022,
   "price": 18990,
   "stock": 4,
-  "description": "Compacto hibrido con garantia oficial.",
-  "imageUrl": "https://example.com/corolla.jpg"
+  "description": "Compacto hibrido con garantia oficial."
 }
 ```
 
-Para subir imagenes al bucket, configura estas variables opcionales:
+Subir una o varias imagenes:
 
-```env
-MINIO_BUCKET=vehicles-images
-MINIO_PUBLIC_URL=https://url-publica-del-bucket
-MINIO_INTERNAL_URL=https://url-interna-o-publica-del-bucket
+```txt
+POST /vehicles/<id>/images
+Content-Type: multipart/form-data
+Field: images
 ```
 
-Si no estan configuradas, la API arranca igualmente y solo fallara el endpoint `POST /vehicles/:id/image`.
+Respuesta de catalogo:
+
+```json
+{
+  "_id": "665f1f77c7f0b2b4b6741b91",
+  "brand": "Toyota",
+  "model": "Corolla",
+  "year": 2022,
+  "price": 18990,
+  "stock": 4,
+  "images": [
+    "https://signed-or-public-url/image-1.jpg"
+  ],
+  "imageKeys": [
+    "vehicles/uuid.jpg"
+  ]
+}
+```
 
 ### Carrito y ventas
 
@@ -122,14 +161,12 @@ Ejemplo de checkout:
 
 El backend valida stock, descuenta unidades y crea una venta con total y desglose.
 
-## Railway
+## Deploy Railway
 
-El proyecto esta preparado para desplegarse sin `docker-compose` en produccion:
+1. Deploy del backend desde GitHub.
+2. Crear servicio MongoDB.
+3. Crear servicio Bucket.
+4. En el backend, referenciar las variables de Mongo y Bucket.
+5. Redeploy del backend.
 
-```txt
-Railway Project
-├── backend-nestjs
-└── mongodb
-```
-
-`docker-compose.yml` queda solo para desarrollo local. En Railway solo necesitas el backend desplegado desde GitHub y un servicio MongoDB con `MONGO_URI` configurada.
+`docker-compose.yml` queda solo para desarrollo local.

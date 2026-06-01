@@ -17,32 +17,45 @@ export class VehiclesService {
     return this.vehicleModel.create(dto);
   }
 
-  findAll() {
-    return this.vehicleModel.find().sort({ createdAt: -1 }).exec();
+  async findAll() {
+    const vehicles = await this.vehicleModel.find().sort({ createdAt: -1 }).exec();
+    return Promise.all(vehicles.map((vehicle) => this.withImageUrls(vehicle)));
   }
 
   async findOne(id: string) {
     const vehicle = await this.vehicleModel.findById(id).exec();
     if (!vehicle) throw new NotFoundException('Vehiculo no encontrado');
-    return vehicle;
+    return this.withImageUrls(vehicle);
   }
 
   async update(id: string, dto: UpdateVehicleDto) {
     const vehicle = await this.vehicleModel.findByIdAndUpdate(id, dto, { new: true }).exec();
     if (!vehicle) throw new NotFoundException('Vehiculo no encontrado');
-    return vehicle;
+    return this.withImageUrls(vehicle);
   }
 
-  async uploadImage(id: string, file: Express.Multer.File) {
-    const vehicle = await this.findOne(id);
-    vehicle.imageUrl = await this.storageService.uploadVehicleImage(file);
+  async uploadImages(id: string, files: Express.Multer.File[]) {
+    const vehicle = await this.vehicleModel.findById(id).exec();
+    if (!vehicle) throw new NotFoundException('Vehiculo no encontrado');
+
+    const imageKeys = await Promise.all(files.map((file) => this.storageService.uploadVehicleImage(file)));
+    vehicle.images.push(...imageKeys);
     await vehicle.save();
-    return vehicle;
+    return this.withImageUrls(vehicle);
   }
 
   async remove(id: string) {
     const vehicle = await this.vehicleModel.findByIdAndDelete(id).exec();
     if (!vehicle) throw new NotFoundException('Vehiculo no encontrado');
     return { message: 'Vehiculo eliminado' };
+  }
+
+  private async withImageUrls(vehicle: VehicleDocument) {
+    const object = vehicle.toObject();
+    return {
+      ...object,
+      imageKeys: object.images,
+      images: await this.storageService.getPublicUrls(object.images ?? []),
+    };
   }
 }

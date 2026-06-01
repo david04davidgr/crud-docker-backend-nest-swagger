@@ -23,8 +23,8 @@ export class Vehicle {
   @Prop({ trim: true, default: '' })
   description!: string;
 
-  @Prop({ trim: true, default: '' })
-  imageUrl!: string;
+  @Prop({ type: [String], default: [] })
+  images!: string[];
 }
 
 export const VehicleSchema = SchemaFactory.createForClass(Vehicle);
